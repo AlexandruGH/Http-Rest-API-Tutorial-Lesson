@@ -1,999 +1,755 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Server, 
-  Globe, 
-  ArrowRight, 
-  ArrowLeft, 
-  Database, 
-  CheckCircle, 
-  XCircle, 
-  AlertTriangle,
-  BookOpen,
-  Zap,
-  LayoutList,
-  Terminal,
-  RefreshCw,
-  Box,
-  ShoppingCart,
-  Star,
-  Filter,
-  Layers,
-  Edit3,
-  GitBranch,
-  FileCode,
-  PlayCircle,
-  Users
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecție Interactivă: HTTP & REST</title>
+    
+    <!-- 1. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- 3. Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-// --- Components ---
-
-const Card = ({ children, className = "" }) => (
-  <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
-    {children}
-  </div>
-);
-
-const Badge = ({ children, color = "blue" }) => {
-  const colors = {
-    blue: "bg-blue-100 text-blue-700",
-    green: "bg-green-100 text-green-700",
-    red: "bg-red-100 text-red-700",
-    purple: "bg-purple-100 text-purple-700",
-    orange: "bg-orange-100 text-orange-700",
-    gray: "bg-slate-100 text-slate-700",
-    teal: "bg-teal-100 text-teal-700"
-  };
-  return (
-    <span className={`px-2 py-1 rounded-md text-xs font-semibold ${colors[color] || colors.blue}`}>
-      {children}
-    </span>
-  );
-};
-
-// --- Module 1: HTTP Visualizer ---
-
-const HttpVisualizer = () => {
-  const [status, setStatus] = useState('idle'); // idle, sending, processing, receiving, done
-  const [method, setMethod] = useState('GET');
-  const [payload, setPayload] = useState(null);
-
-  const methods = [
-    { name: 'GET', desc: 'Cere date', color: 'blue' },
-    { name: 'HEAD', desc: 'Doar headers', color: 'teal' },
-    { name: 'POST', desc: 'Trimite date', color: 'green' },
-    { name: 'PUT', desc: 'Înlocuiește', color: 'orange' },
-    { name: 'DELETE', desc: 'Șterge', color: 'red' },
-  ];
-
-  const simulateRequest = () => {
-    setStatus('sending');
-    setTimeout(() => setStatus('processing'), 1500);
-    setTimeout(() => {
-        if (method === 'HEAD') {
-            // HEAD returns NO body, only headers
-            setPayload(null); 
-        } else {
-            setPayload(method === 'GET' ? { id: 1, name: 'iPhone 15', price: 999 } : { success: true });
+    <style>
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        setStatus('receiving');
-    }, 3000);
-    setTimeout(() => setStatus('done'), 4500);
-  };
-
-  const reset = () => {
-    setStatus('idle');
-    setPayload(null);
-  };
-
-  // Mock headers for visualization
-  const mockHeaders = {
-      "Status": "200 OK",
-      "Content-Type": "application/json",
-      "Content-Length": method === 'HEAD' || method === 'GET' ? "124 bytes" : "25 bytes",
-      "Date": new Date().toUTCString().split(' ').slice(4, 5).join(':') + " GMT" // Simplified time
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
-        <h3 className="text-lg font-bold text-slate-800 mb-2">1. Protocolul HTTP (Transportul)</h3>
-        <p className="text-slate-600 mb-4">
-          Gândește-te la HTTP ca la un serviciu de curierat. Clientul trimite o <strong>Cerere (Request)</strong>, iar Serverul trimite înapoi un <strong>Răspuns (Response)</strong>.
-        </p>
+        .animate-fade-in {
+            animation: fade-in 0.3s ease-out forwards;
+        }
         
-        <div className="flex flex-wrap justify-center gap-2 mb-8">
-          {methods.map(m => (
-            <button
-              key={m.name}
-              onClick={() => { setMethod(m.name); reset(); }}
-              disabled={status !== 'idle' && status !== 'done'}
-              className={`px-3 py-2 rounded-lg font-bold text-sm transition-all ${
-                method === m.name 
-                  ? `bg-${m.color}-500 text-white shadow-md ring-2 ring-offset-2 ring-${m.color}-500` 
-                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-300'
-              }`}
-            >
-              {m.name}
-            </button>
-          ))}
-        </div>
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569; 
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased selection:bg-indigo-100 selection:text-indigo-700">
+    <div id="root"></div>
 
-        {/* Animation Area */}
-        <div className="relative h-48 bg-white rounded-xl border border-slate-200 flex items-center justify-between px-4 md:px-16 overflow-hidden">
-          
-          {/* Client */}
-          <div className="flex flex-col items-center z-10 w-24">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center border-4 border-blue-500 mb-2">
-              <Globe className="w-8 h-8 text-blue-600" />
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- ICONIȚE (SVG Inline) ---
+        const IconBase = ({ children, className, ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>
+        );
+
+        const Server = (p) => <IconBase {...p}><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></IconBase>;
+        const Globe = (p) => <IconBase {...p}><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></IconBase>;
+        const ArrowRight = (p) => <IconBase {...p}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></IconBase>;
+        const Zap = (p) => <IconBase {...p}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></IconBase>;
+        const Database = (p) => <IconBase {...p}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></IconBase>;
+        const CheckCircle = (p) => <IconBase {...p}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconBase>;
+        const XCircle = (p) => <IconBase {...p}><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></IconBase>;
+        const AlertTriangle = (p) => <IconBase {...p}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></IconBase>;
+        const BookOpen = (p) => <IconBase {...p}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconBase>;
+        const LayoutList = (p) => <IconBase {...p}><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><path d="M14 4h7"/><path d="M14 9h7"/><path d="M14 15h7"/><path d="M14 20h7"/></IconBase>;
+        const Terminal = (p) => <IconBase {...p}><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></IconBase>;
+        const RefreshCw = (p) => <IconBase {...p}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></IconBase>;
+        const Box = (p) => <IconBase {...p}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></IconBase>;
+        const ShoppingCart = (p) => <IconBase {...p}><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></IconBase>;
+        const Star = (p) => <IconBase {...p}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></IconBase>;
+        const Filter = (p) => <IconBase {...p}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></IconBase>;
+        const Layers = (p) => <IconBase {...p}><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></IconBase>;
+        const Edit3 = (p) => <IconBase {...p}><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></IconBase>;
+        const GitBranch = (p) => <IconBase {...p}><line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></IconBase>;
+        const Users = (p) => <IconBase {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconBase>;
+
+        // --- COMPONENTE UI ---
+        const Card = ({ children, className = "" }) => (
+            <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
+                {children}
             </div>
-            <span className="font-bold text-slate-700">Client</span>
-            <span className="text-xs text-slate-500">(Browser/App)</span>
-          </div>
+        );
 
-          {/* Connection Lines */}
-          <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-slate-200 -translate-y-8"></div>
-          <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-slate-200 translate-y-8"></div>
+        const Badge = ({ children, color = "blue" }) => {
+            const colors = {
+                blue: "bg-blue-100 text-blue-700",
+                green: "bg-green-100 text-green-700",
+                red: "bg-red-100 text-red-700",
+                purple: "bg-purple-100 text-purple-700",
+                orange: "bg-orange-100 text-orange-700",
+                gray: "bg-slate-100 text-slate-700",
+                teal: "bg-teal-100 text-teal-700"
+            };
+            return (
+                <span className={`px-2 py-1 rounded-md text-xs font-semibold ${colors[color] || colors.blue}`}>
+                    {children}
+                </span>
+            );
+        };
 
-          {/* Packet Animation */}
-          {status !== 'idle' && status !== 'done' && (
-            <div 
-              className={`absolute top-1/2 -mt-4 w-12 h-12 bg-white border-2 rounded-lg flex items-center justify-center shadow-lg z-20 transition-all duration-[1500ms] ease-in-out ${
-                status === 'sending' ? 'left-[20%] border-blue-500 -translate-y-12' : 
-                status === 'processing' ? 'left-[50%] scale-0 opacity-0' :
-                status === 'receiving' ? 'left-[20%] border-green-500 translate-y-4' : ''
-              }`}
-              style={{
-                left: status === 'sending' ? '80%' : status === 'receiving' ? '10%' : '50%'
-              }}
-            >
-              <span className="text-xs font-bold">
-                {status === 'sending' ? method : status === 'receiving' ? '200 OK' : ''}
-              </span>
-            </div>
-          )}
+        // --- MODUL 1: VIZUALIZATOR ---
+        const HttpVisualizer = () => {
+            const [status, setStatus] = useState('idle');
+            const [method, setMethod] = useState('GET');
+            const [payload, setPayload] = useState(null);
 
-          {/* Server */}
-          <div className="flex flex-col items-center z-10 w-24">
-            <div className={`w-16 h-16 bg-indigo-100 rounded-lg flex items-center justify-center border-4 ${status === 'processing' ? 'border-yellow-400 animate-pulse' : 'border-indigo-600'} mb-2`}>
-              <Server className="w-8 h-8 text-indigo-700" />
-            </div>
-            <span className="font-bold text-slate-700">Server</span>
-            <span className="text-xs text-slate-500">(API/Database)</span>
-          </div>
+            const methods = [
+                { name: 'GET', desc: 'Cere date', color: 'blue' },
+                { name: 'HEAD', desc: 'Doar headers', color: 'teal' },
+                { name: 'POST', desc: 'Trimite date', color: 'green' },
+                { name: 'PUT', desc: 'Înlocuiește', color: 'orange' },
+                { name: 'DELETE', desc: 'Șterge', color: 'red' },
+            ];
 
-        </div>
-
-        <div className="mt-6 flex justify-center">
-          {status === 'idle' || status === 'done' ? (
-            <button 
-              onClick={simulateRequest}
-              className="bg-slate-900 text-white px-6 py-2 rounded-lg hover:bg-slate-800 flex items-center gap-2"
-            >
-              <Zap size={18} /> Simulează Cererea
-            </button>
-          ) : (
-             <div className="text-slate-500 italic">Se procesează tranzacția HTTP...</div>
-          )}
-        </div>
-
-        {status === 'done' && (
-           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-             {/* Response Headers */}
-             <div className="bg-slate-100 rounded border border-slate-300 p-3 font-mono text-xs shadow-sm">
-                <div className="text-slate-500 font-bold border-b border-slate-200 pb-1 mb-2 flex justify-between">
-                    <span>RESPONSE HEADERS</span>
-                    <span className="text-[10px] bg-slate-200 px-1 rounded">MetaData</span>
-                </div>
-                <div className="space-y-1 text-slate-700">
-                    {Object.entries(mockHeaders).map(([key, val]) => (
-                        <div key={key}><span className="text-blue-600 font-semibold">{key}:</span> {val}</div>
-                    ))}
-                </div>
-             </div>
-
-             {/* Response Body */}
-             <div className={`rounded border p-3 font-mono text-xs shadow-sm transition-all ${method === 'HEAD' ? 'bg-slate-50 border-slate-200 opacity-50' : 'bg-green-50 border-green-200'}`}>
-                <div className="text-slate-500 font-bold border-b border-slate-200 pb-1 mb-2 flex justify-between">
-                    <span>RESPONSE BODY</span>
-                    <span className="text-[10px] bg-slate-200 px-1 rounded">Conținut</span>
-                </div>
-                {method === 'HEAD' ? (
-                     <div className="flex flex-col items-center justify-center h-20 text-slate-400 italic">
-                        <XCircle size={24} className="mb-1 opacity-50"/>
-                        (Niciun conținut la HEAD)
-                     </div>
-                 ) : (
-                     <pre className="text-green-800 overflow-x-auto">
-                        {JSON.stringify(payload, null, 2)}
-                     </pre>
-                 )}
-             </div>
-           </div>
-        )}
-      </div>
-
-       {/* Explicație GET vs HEAD */}
-       <div className="grid md:grid-cols-2 gap-4">
-            <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
-                <h4 className="font-bold text-blue-800 mb-2 flex items-center gap-2"><ArrowRight size={16}/> GET Request</h4>
-                <p className="text-sm text-blue-700">
-                    Descarcă <strong>tot conținutul</strong> (Body + Headers). Folosit pentru a afișa pagini, imagini, date JSON.
-                </p>
-            </div>
-            <div className="p-4 bg-teal-50 border border-teal-100 rounded-lg">
-                <h4 className="font-bold text-teal-800 mb-2 flex items-center gap-2"><ArrowRight size={16}/> HEAD Request</h4>
-                <p className="text-sm text-teal-700">
-                    Cere <strong>doar Headers</strong> (fără Body). Identic cu GET, dar serverul nu trimite datele efective. 
-                    <br/><span className="italic opacity-80 mt-1 block">Util: Verifici dacă un fișier există sau cât de mare e (Content-Length) înainte să-l descarci.</span>
-                </p>
-            </div>
-       </div>
-    </div>
-  );
-};
-
-// --- Module 2: REST vs RPC Comparison ---
-
-const RestComparison = () => {
-  const [mode, setMode] = useState('rest'); // 'rest' or 'rpc'
-
-  const examples = [
-    { action: "Obține toate produsele", rpc: "GET /api/getAllProducts", rest: "GET /api/products", type: "read" },
-    { action: "Adaugă un produs", rpc: "GET /api/createProduct?name=Phone", rest: "POST /api/products", type: "write" },
-    { action: "Vezi produsul #42", rpc: "POST /api/getProductDetails {id:42}", rest: "GET /api/products/42", type: "read" },
-    { action: "Șterge produsul #42", rpc: "GET /api/deleteProduct/42", rest: "DELETE /api/products/42", type: "delete" },
-    { action: "Schimbă preț produs #42", rpc: "POST /api/updatePrice/42", rest: "PATCH /api/products/42", type: "update" }
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
-        <h3 className="text-lg font-bold text-slate-800 mb-4">2. REST vs. Non-REST (Haos)</h3>
-        <p className="text-slate-600 mb-6">
-            HTTP este limba. REST este "gramatica" corectă. Dacă nu folosești REST, URL-urile tale arată ca niște comenzi dezordonate (RPC - Remote Procedure Call).
-        </p>
-
-        <div className="flex bg-slate-100 p-1 rounded-lg w-fit mb-6">
-            <button 
-                onClick={() => setMode('rpc')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${mode === 'rpc' ? 'bg-white shadow-sm text-red-600' : 'text-slate-500'}`}
-            >
-                Non-REST (Greșit)
-            </button>
-            <button 
-                onClick={() => setMode('rest')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${mode === 'rest' ? 'bg-white shadow-sm text-green-600' : 'text-slate-500'}`}
-            >
-                RESTful (Corect)
-            </button>
-        </div>
-
-        <div className="overflow-hidden rounded-lg border border-slate-200">
-            <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                        <th className="p-4 text-slate-500 font-medium">Acțiunea Dorită</th>
-                        <th className="p-4 text-slate-500 font-medium">
-                            {mode === 'rest' ? 'Abordarea REST' : 'Abordarea Non-REST'}
-                        </th>
-                        <th className="p-4 text-slate-500 font-medium hidden md:table-cell">Explicație</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                    {examples.map((ex, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                            <td className="p-4 font-medium text-slate-700">{ex.action}</td>
-                            <td className="p-4 font-mono">
-                                {mode === 'rest' ? (
-                                    <span className="flex items-center gap-2">
-                                        <Badge color={
-                                            ex.rest.startsWith('GET') ? 'blue' : 
-                                            ex.rest.startsWith('POST') ? 'green' :
-                                            ex.rest.startsWith('DELETE') ? 'red' : 'orange'
-                                        }>{ex.rest.split(' ')[0]}</Badge>
-                                        <span className="text-slate-600">{ex.rest.split(' ')[1]}</span>
-                                    </span>
-                                ) : (
-                                    <span className="text-red-600 flex items-center gap-2">
-                                         <XCircle size={14} /> {ex.rpc}
-                                    </span>
-                                )}
-                            </td>
-                            <td className="p-4 text-slate-500 text-xs hidden md:table-cell">
-                                {mode === 'rest' ? (
-                                    <span>Folosim verbul <strong>{ex.rest.split(' ')[0]}</strong> pe resursa <strong>Products</strong>.</span>
-                                ) : (
-                                    <span>Verbul e în URL. Metoda HTTP e ignorată sau folosită greșit.</span>
-                                )}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-        
-        {mode === 'rest' && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-100 rounded-lg flex items-start gap-3">
-                <CheckCircle className="text-green-600 mt-1 shrink-0" size={20} />
-                <div>
-                    <p className="text-green-800 font-semibold text-sm">De ce e REST mai bun?</p>
-                    <p className="text-green-700 text-sm mt-1">
-                        URL-urile sunt predictibile. Dacă știi cum arată resursa (`/api/products`), știi automat cum să o creezi, citești, editezi sau ștergi doar schimbând verbul HTTP.
-                    </p>
-                </div>
-            </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// --- Module 3: Interactive Playground ---
-
-const ApiPlayground = () => {
-    const [logs, setLogs] = useState([]);
-    const [selectedVerb, setSelectedVerb] = useState('GET');
-    const [endpoint, setEndpoint] = useState('/products');
-    const [loading, setLoading] = useState(false);
-    const [activeResource, setActiveResource] = useState('products');
-
-    // Mock Data
-    const products = [
-        { id: 1, name: "Laptop Gaming", price: 1200, stock: 5 },
-        { id: 2, name: "Căști Wireless", price: 150, stock: 20 },
-        { id: 3, name: "Monitor 4K", price: 400, stock: 8 },
-    ];
-
-    const users = [
-        { id: 101, name: "Ana Popescu", email: "ana@test.com", role: "admin" },
-        { id: 102, name: "Mihai Ionescu", email: "mihai@test.com", role: "customer" },
-        { id: 103, name: "Elena Dumitru", email: "elena@test.com", role: "customer" },
-    ];
-
-    const handleResourceChange = (resource) => {
-        setActiveResource(resource);
-        setEndpoint(`/${resource}`);
-        setSelectedVerb('GET');
-    };
-
-    const handleSend = () => {
-        setLoading(true);
-        
-        // Simulating network delay
-        setTimeout(() => {
-            let response = {};
-            let status = 200;
-            let statusText = "OK";
-
-            // PRODUCTS LOGIC
-            if (endpoint.includes('products')) {
-                if (selectedVerb === 'GET') {
-                    if (endpoint === '/products' || endpoint === '/products?sort=price_desc') {
-                        response = products;
-                    } else if (endpoint === '/products/1') {
-                        response = products[0];
-                    } else if (endpoint.includes('?')) {
-                        response = [products[0]]; // Mock search result
+            const simulateRequest = () => {
+                setStatus('sending');
+                setTimeout(() => setStatus('processing'), 1500);
+                setTimeout(() => {
+                    if (method === 'HEAD') {
+                        setPayload(null); 
                     } else {
-                        status = 404; statusText = "Not Found"; response = { error: "Produsul nu există" };
+                        setPayload(method === 'GET' ? { id: 1, name: 'iPhone 15', price: 999 } : { success: true });
                     }
-                } else if (selectedVerb === 'HEAD') {
-                    status = 200; statusText = "OK"; response = null;
-                } else if (selectedVerb === 'POST') {
-                    status = 201; statusText = "Created"; response = { id: 4, name: "Produs Nou", price: 0 };
-                } else if (selectedVerb === 'DELETE') {
-                    status = 204; statusText = "No Content"; response = null;
-                } else {
-                    status = 405; statusText = "Method Not Allowed";
-                }
-            } 
-            // USERS LOGIC
-            else if (endpoint.includes('users')) {
-                if (selectedVerb === 'GET') {
-                    if (endpoint === '/users') {
-                        response = users;
-                    } else if (endpoint === '/users/101') {
-                        response = users[0];
-                    } else {
-                        status = 404; statusText = "Not Found"; response = { error: "Utilizatorul nu există" };
-                    }
-                } else if (selectedVerb === 'POST') {
-                    status = 201; statusText = "Created"; response = { id: 104, name: "User Nou", email: "new@test.com" };
-                } else if (selectedVerb === 'DELETE') {
-                     status = 204; statusText = "No Content"; response = null;
-                } else {
-                    status = 405; statusText = "Method Not Allowed";
-                }
-            }
-            else {
-                status = 404; statusText = "Not Found"; response = { error: "Endpoint necunoscut" };
-            }
-
-            const newLog = {
-                id: Date.now(),
-                verb: selectedVerb,
-                url: `/api${endpoint}`,
-                status,
-                statusText,
-                data: response
+                    setStatus('receiving');
+                }, 3000);
+                setTimeout(() => setStatus('done'), 4500);
             };
 
-            setLogs([newLog, ...logs]);
-            setLoading(false);
-        }, 600);
-    };
+            const reset = () => {
+                setStatus('idle');
+                setPayload(null);
+            };
 
-    return (
-        <div className="bg-slate-900 rounded-xl overflow-hidden shadow-xl border border-slate-700 font-mono text-sm">
-            <div className="bg-slate-800 p-3 border-b border-slate-700 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Terminal size={16} className="text-slate-400" />
-                    <span className="text-slate-200 font-bold">API Console</span>
-                </div>
-                <button onClick={() => setLogs([])} className="text-xs text-slate-400 hover:text-white flex items-center gap-1">
-                    <RefreshCw size={12} /> Clear
-                </button>
-            </div>
+            const mockHeaders = {
+                "Status": "200 OK",
+                "Content-Type": "application/json",
+                "Content-Length": method === 'HEAD' || method === 'GET' ? "124 bytes" : "25 bytes",
+                "Date": new Date().toUTCString().split(' ').slice(4, 5).join(':') + " GMT"
+            };
 
-            {/* Resource Switcher */}
-            <div className="bg-slate-800/30 p-2 flex gap-2 border-b border-slate-700 overflow-x-auto">
-                <button 
-                    onClick={() => handleResourceChange('products')}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded transition-colors text-xs font-bold ${activeResource === 'products' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
-                >
-                    <ShoppingCart size={14} /> PRODUCTS
-                </button>
-                <button 
-                    onClick={() => handleResourceChange('users')}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded transition-colors text-xs font-bold ${activeResource === 'users' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
-                >
-                    <Users size={14} /> USERS
-                </button>
-            </div>
-
-            {/* Controls */}
-            <div className="p-4 bg-slate-800/50 flex flex-col md:flex-row gap-3">
-                <select 
-                    value={selectedVerb}
-                    onChange={(e) => setSelectedVerb(e.target.value)}
-                    className="bg-slate-900 text-blue-400 font-bold border border-slate-700 rounded px-3 py-2 outline-none focus:border-blue-500"
-                >
-                    <option>GET</option>
-                    <option>HEAD</option>
-                    <option>POST</option>
-                    <option>PUT</option>
-                    <option>DELETE</option>
-                    <option>PATCH</option>
-                </select>
-
-                <div className="flex-1 flex items-center bg-slate-900 border border-slate-700 rounded px-3">
-                    <span className="text-slate-500 select-none">https://shop-api.com/api</span>
-                    <input 
-                        type="text" 
-                        value={endpoint}
-                        onChange={(e) => setEndpoint(e.target.value)}
-                        className="bg-transparent text-slate-200 w-full p-2 outline-none"
-                    />
-                </div>
-
-                <button 
-                    onClick={handleSend}
-                    disabled={loading}
-                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded transition-colors disabled:opacity-50"
-                >
-                    {loading ? '...' : 'SEND'}
-                </button>
-            </div>
-
-            {/* Hints */}
-            <div className="px-4 py-2 text-xs text-slate-500 flex gap-4 overflow-x-auto">
-                {activeResource === 'products' ? (
-                    <>
-                    <span className="cursor-pointer hover:text-blue-400" onClick={() => {setEndpoint('/products'); setSelectedVerb('GET')}}>Try: GET /products</span>
-                    <span className="cursor-pointer hover:text-blue-400" onClick={() => {setEndpoint('/products?sort=price_desc'); setSelectedVerb('GET')}}>Try: Sortare</span>
-                    <span className="cursor-pointer hover:text-green-400" onClick={() => {setEndpoint('/products'); setSelectedVerb('POST')}}>Try: POST /products</span>
-                    <span className="cursor-pointer hover:text-red-400" onClick={() => {setEndpoint('/products/1'); setSelectedVerb('DELETE')}}>Try: DELETE /products/1</span>
-                    </>
-                ) : (
-                    <>
-                    <span className="cursor-pointer hover:text-blue-400" onClick={() => {setEndpoint('/users'); setSelectedVerb('GET')}}>Try: GET /users</span>
-                    <span className="cursor-pointer hover:text-blue-400" onClick={() => {setEndpoint('/users/101'); setSelectedVerb('GET')}}>Try: GET /users/101</span>
-                    <span className="cursor-pointer hover:text-green-400" onClick={() => {setEndpoint('/users'); setSelectedVerb('POST')}}>Try: POST /users</span>
-                    <span className="cursor-pointer hover:text-red-400" onClick={() => {setEndpoint('/users/101'); setSelectedVerb('DELETE')}}>Try: DELETE /users/101</span>
-                    </>
-                )}
-            </div>
-
-            {/* Console Output */}
-            <div className="h-64 overflow-y-auto p-4 space-y-4 bg-slate-950">
-                {logs.length === 0 && (
-                    <div className="text-slate-600 text-center mt-20 italic">
-                        Aștept cereri... (Selectează un verb și apasă SEND)
-                    </div>
-                )}
-                {logs.map(log => (
-                    <div key={log.id} className="border-l-2 border-slate-700 pl-3 animate-fade-in">
-                        <div className="flex items-center gap-3 mb-1">
-                            <span className={`font-bold ${
-                                log.verb === 'GET' ? 'text-blue-400' : 
-                                log.verb === 'HEAD' ? 'text-teal-400' : 
-                                log.verb === 'POST' ? 'text-green-400' :
-                                log.verb === 'DELETE' ? 'text-red-400' : 'text-orange-400'
-                            }`}>{log.verb}</span>
-                            <span className="text-slate-400">{log.url}</span>
-                            <span className={`ml-auto text-xs px-2 py-0.5 rounded ${
-                                log.status >= 200 && log.status < 300 ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'
-                            }`}>
-                                {log.status} {log.statusText}
-                            </span>
+            return (
+                <div className="space-y-6">
+                    <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
+                        <h3 className="text-lg font-bold text-slate-800 mb-2">1. Protocolul HTTP (Transportul)</h3>
+                        <p className="text-slate-600 mb-4">
+                        Gândește-te la HTTP ca la un serviciu de curierat. Clientul trimite o <strong>Cerere (Request)</strong>, iar Serverul trimite înapoi un <strong>Răspuns (Response)</strong>.
+                        </p>
+                        
+                        <div className="flex flex-wrap justify-center gap-2 mb-8">
+                        {methods.map((m) => (
+                            <button
+                                key={m.name}
+                                onClick={() => { setMethod(m.name); reset(); }}
+                                disabled={status !== 'idle' && status !== 'done'}
+                                className={`px-3 py-2 rounded-lg font-bold text-sm transition-all ${
+                                    method === m.name 
+                                    ? `bg-${m.color}-500 text-white shadow-md ring-2 ring-offset-2 ring-${m.color}-500` 
+                                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-300'
+                                }`}
+                            >
+                                {m.name}
+                            </button>
+                        ))}
                         </div>
-                        {log.data !== null ? (
-                            <pre className="text-slate-300 text-xs overflow-x-auto mt-2 bg-slate-900/50 p-2 rounded">
-                                {JSON.stringify(log.data, null, 2)}
-                            </pre>
+
+                        <div className="relative h-48 bg-white rounded-xl border border-slate-200 flex items-center justify-between px-4 md:px-16 overflow-hidden">
+                            {/* Client */}
+                            <div className="flex flex-col items-center z-10 w-24">
+                                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center border-4 border-blue-500 mb-2">
+                                <Globe className="w-8 h-8 text-blue-600" />
+                                </div>
+                                <span className="font-bold text-slate-700">Client</span>
+                                <span className="text-xs text-slate-500">(Browser/App)</span>
+                            </div>
+
+                            {/* Lines */}
+                            <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-slate-200 -translate-y-8"></div>
+                            <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-slate-200 translate-y-8"></div>
+
+                            {/* Packet */}
+                            {status !== 'idle' && status !== 'done' && (
+                                <div 
+                                className={`absolute top-1/2 -mt-4 w-12 h-12 bg-white border-2 rounded-lg flex items-center justify-center shadow-lg z-20 transition-all duration-[1500ms] ease-in-out ${
+                                    status === 'sending' ? 'left-[20%] border-blue-500 -translate-y-12' : 
+                                    status === 'processing' ? 'left-[50%] scale-0 opacity-0' :
+                                    status === 'receiving' ? 'left-[20%] border-green-500 translate-y-4' : ''
+                                }`}
+                                style={{
+                                    left: status === 'sending' ? '80%' : status === 'receiving' ? '10%' : '50%'
+                                }}
+                                >
+                                <span className="text-xs font-bold">
+                                    {status === 'sending' ? method : status === 'receiving' ? '200 OK' : ''}
+                                </span>
+                                </div>
+                            )}
+
+                            {/* Server */}
+                            <div className="flex flex-col items-center z-10 w-24">
+                                <div className={`w-16 h-16 bg-indigo-100 rounded-lg flex items-center justify-center border-4 ${status === 'processing' ? 'border-yellow-400 animate-pulse' : 'border-indigo-600'} mb-2`}>
+                                <Server className="w-8 h-8 text-indigo-700" />
+                                </div>
+                                <span className="font-bold text-slate-700">Server</span>
+                                <span className="text-xs text-slate-500">(API/Database)</span>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex justify-center">
+                        {status === 'idle' || status === 'done' ? (
+                            <button 
+                            onClick={simulateRequest}
+                            className="bg-slate-900 text-white px-6 py-2 rounded-lg hover:bg-slate-800 flex items-center gap-2"
+                            >
+                            <Zap size={18} /> Simulează Cererea
+                            </button>
                         ) : (
-                            <div className="text-slate-500 text-xs italic mt-2 bg-slate-900/30 p-2 rounded">
-                                [No Body Content]
+                            <div className="text-slate-500 italic">Se procesează tranzacția HTTP...</div>
+                        )}
+                        </div>
+
+                        {status === 'done' && (
+                            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
+                                <div className="bg-slate-100 rounded border border-slate-300 p-3 font-mono text-xs shadow-sm">
+                                    <div className="text-slate-500 font-bold border-b border-slate-200 pb-1 mb-2 flex justify-between">
+                                        <span>RESPONSE HEADERS</span>
+                                        <span className="text-[10px] bg-slate-200 px-1 rounded">MetaData</span>
+                                    </div>
+                                    <div className="space-y-1 text-slate-700">
+                                        {Object.entries(mockHeaders).map(([key, val]) => (
+                                            <div key={key}><span className="text-blue-600 font-semibold">{key}:</span> {val}</div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className={`rounded border p-3 font-mono text-xs shadow-sm transition-all ${method === 'HEAD' ? 'bg-slate-50 border-slate-200 opacity-50' : 'bg-green-50 border-green-200'}`}>
+                                    <div className="text-slate-500 font-bold border-b border-slate-200 pb-1 mb-2 flex justify-between">
+                                        <span>RESPONSE BODY</span>
+                                        <span className="text-[10px] bg-slate-200 px-1 rounded">Conținut</span>
+                                    </div>
+                                    {method === 'HEAD' ? (
+                                        <div className="flex flex-col items-center justify-center h-20 text-slate-400 italic">
+                                            <XCircle size={24} className="mb-1 opacity-50"/>
+                                            (Niciun conținut la HEAD)
+                                        </div>
+                                    ) : (
+                                        <pre className="text-green-800 overflow-x-auto">
+                                            {JSON.stringify(payload, null, 2)}
+                                        </pre>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-// --- Module 5: CRUD Guide (Updated!) ---
-
-const CrudGuide = () => {
-    return (
-        <div className="space-y-8 animate-fade-in">
-             <div className="mb-6">
-                <h2 className="text-2xl font-bold text-slate-800">Ghid de Design CRUD</h2>
-                <p className="text-slate-500">Regulile de aur pentru un API curat (Actualizat).</p>
-            </div>
-
-            {/* 1. Naming & Nouns */}
-            <Card className="p-6">
-                 <div className="flex items-center gap-3 mb-4">
-                    <div className="bg-purple-100 p-2 rounded-lg text-purple-700">
-                        <Box size={20} />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-800">1. Naming & Convenții</h3>
-                </div>
-                
-                <div className="grid md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                         {/* Rule: Domain Model */}
-                        <div className="text-sm">
-                            <strong className="block text-slate-700 mb-1">Modelează Domeniul Real</strong>
-                            <p className="text-slate-600">Folosește termeni simpli și comuni. Nu inventa cuvinte complicate.</p>
-                            <div className="mt-2 flex gap-2 text-xs font-mono">
-                                <span className="text-green-600 bg-green-50 px-2 py-1 rounded">✅ /people</span>
-                                <span className="text-red-600 bg-red-50 px-2 py-1 rounded">❌ /special-snowflakes</span>
-                            </div>
-                        </div>
-
-                         {/* Rule: Lowercase */}
-                        <div className="text-sm">
-                            <strong className="block text-slate-700 mb-1">Lowercase (Obligatoriu)</strong>
-                            <p className="text-slate-600">URL-urile sunt case-sensitive pe unele servere. Evită ambiguitatea.</p>
-                            <div className="mt-2 flex gap-2 text-xs font-mono">
-                                <span className="text-green-600 bg-green-50 px-2 py-1 rounded">✅ /items</span>
-                                <span className="text-red-600 bg-red-50 px-2 py-1 rounded">❌ /Items</span>
-                            </div>
-                        </div>
-
-                        {/* Rule: Hyphens */}
-                        <div className="text-sm">
-                            <strong className="block text-slate-700 mb-1">Cratime, nu Underscores</strong>
-                            <p className="text-slate-600">Când URL-urile sunt link-uri subliniate, caracterul `_` devine invizibil.</p>
-                            <div className="mt-2 flex gap-2 text-xs font-mono">
-                                <span className="text-green-600 bg-green-50 px-2 py-1 rounded">✅ /legal-documents</span>
-                                <span className="text-red-600 bg-red-50 px-2 py-1 rounded">❌ /legal_documents</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
-                         {/* Rule: Implementation Hiding */}
-                        <div className="text-sm">
-                            <strong className="block text-slate-700 mb-1">Ascunde Implementarea</strong>
-                            <p className="text-slate-600 mb-2">Nu arăta utilizatorului ce tehnologie folosești (.php, .jsp).</p>
-                             <ul className="space-y-2 text-xs font-mono">
-                                <li className="flex items-center gap-2 text-red-600">
-                                    <XCircle size={14} /> /api.php/users
-                                </li>
-                                <li className="flex items-center gap-2 text-green-700">
-                                    <CheckCircle size={14} /> /api/users
-                                </li>
-                            </ul>
-                        </div>
-
-                        {/* Rule: Plurals */}
-                        <div className="text-sm">
-                            <strong className="block text-slate-700 mb-1">Substantive la Plural</strong>
-                            <p className="text-slate-600 mb-2">Folosește pluralul pentru consistență, chiar și dacă returnezi un singur element.</p>
-                             <ul className="space-y-2 text-xs font-mono">
-                                <li className="flex items-center gap-2 text-red-600">
-                                    <XCircle size={14} /> /file
-                                </li>
-                                <li className="flex items-center gap-2 text-green-700">
-                                    <CheckCircle size={14} /> /files
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </Card>
-
-            {/* 2. Path Structure */}
-            <Card className="p-6">
-                 <div className="flex items-center gap-3 mb-4">
-                    <div className="bg-blue-100 p-2 rounded-lg text-blue-700">
-                        <Layers size={20} />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-800">2. Structura Căilor (Paths)</h3>
-                </div>
-                
-                <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                        <strong className="text-sm text-slate-800">Identificatori în Path, nu Query</strong>
-                        <p className="text-xs text-slate-500 mb-2">Resursele individuale se identifică prin URL, nu prin parametri.</p>
-                        <div className="flex flex-col gap-2 font-mono text-xs">
-                             <span className="text-green-600 bg-green-50 p-2 rounded block">✅ /contacts/22</span>
-                             <span className="text-red-600 bg-red-50 p-2 rounded block">❌ /contacts?id=22</span>
-                        </div>
-                    </div>
-
-                    <div>
-                        <strong className="text-sm text-slate-800">Limită de Nesting</strong>
-                        <p className="text-xs text-slate-500 mb-2">Maxim 2 niveluri de adâncime. Dacă e mai adânc, e prea complex.</p>
-                         <div className="flex flex-col gap-2 font-mono text-xs">
-                             <span className="text-green-600 bg-green-50 p-2 rounded block">✅ /users/1/addresses</span>
-                             <span className="text-red-600 bg-red-50 p-2 rounded block">❌ /users/1/company/5/department/3</span>
-                        </div>
-                    </div>
-                </div>
-            </Card>
-
-             {/* 3. HTTP Methods */}
-            <Card className="p-6">
-                 <div className="flex items-center gap-3 mb-4">
-                    <div className="bg-orange-100 p-2 rounded-lg text-orange-700">
-                        <Edit3 size={20} />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-800">3. Metode HTTP & Nuanțe</h3>
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                    <div className="border border-orange-200 bg-orange-50 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="font-bold text-orange-800">PUT vs PATCH</span>
-                        </div>
-                        <p className="text-xs text-orange-800/80">
-                            <strong>PUT</strong> = Înlocuire Totală (Rescriere).<br/>
-                            <strong>PATCH</strong> = Modificare Parțială.
-                        </p>
-                    </div>
-
-                    <div className="border border-teal-200 bg-teal-50 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="font-bold text-teal-800">GET vs HEAD</span>
-                        </div>
-                        <p className="text-xs text-teal-800/80">
-                            <strong>GET</strong> = Descarcă tot (Headers + Body).<br/>
-                            <strong>HEAD</strong> = Doar verifică (Headers only). Util pentru cache/verificare existență.
-                        </p>
-                    </div>
-                </div>
-            </Card>
-
-             {/* 4. Query Params (Restored) */}
-            <Card className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="bg-slate-100 p-2 rounded-lg text-slate-700">
-                        <Filter size={20} />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-800">4. Filtrare, Sortare & Paginare</h3>
-                </div>
-                <p className="text-slate-600 text-sm mb-4">
-                    Nu crea endpoint-uri noi pentru căutare (ex: <code>/searchUsers</code>). Folosește <strong>Query Parameters</strong>.
-                </p>
-                <div className="space-y-3 font-mono text-xs">
-                    <div className="flex justify-between items-center border-b pb-2">
-                        <span className="text-slate-500">Căutare</span>
-                        <span className="bg-slate-100 px-2 py-1 rounded text-blue-600">GET /products?search=iphone</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b pb-2">
-                        <span className="text-slate-500">Paginare</span>
-                        <span className="bg-slate-100 px-2 py-1 rounded text-blue-600">GET /products?page=2&limit=10</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Sortare</span>
-                        <span className="bg-slate-100 px-2 py-1 rounded text-blue-600">GET /products?sort=price_desc</span>
-                    </div>
-                </div>
-            </Card>
-
-             {/* 5. Advanced & Controversial */}
-             <Card className="p-6 border-l-4 border-l-indigo-500">
-                 <div className="flex items-center gap-3 mb-4">
-                    <div className="bg-indigo-100 p-2 rounded-lg text-indigo-700">
-                        <GitBranch size={20} />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-800">5. Subiecte Avansate / Controversate</h3>
-                </div>
-
-                <div className="space-y-6 divide-y divide-slate-100">
                     
-                    {/* Versioning */}
-                    <div className="pt-2">
-                        <h4 className="font-bold text-sm text-slate-800 mb-1">Versioning</h4>
-                        <div className="flex flex-col md:flex-row gap-4 text-xs">
-                            <div className="flex-1 bg-slate-50 p-3 rounded">
-                                <strong className="text-indigo-600 block mb-1">Abordarea Pragmatică (URL)</strong>
-                                <code>/v1/users</code>
-                                <p className="text-slate-500 mt-1">Ușor de văzut, ușor de folosit. Standard în industrie.</p>
+                    <div className="grid md:grid-cols-2 gap-4">
+                            <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                                <h4 className="font-bold text-blue-800 mb-2 flex items-center gap-2"><ArrowRight size={16}/> GET Request</h4>
+                                <p className="text-sm text-blue-700">
+                                    Descarcă <strong>tot conținutul</strong> (Body + Headers). Folosit pentru a afișa pagini, imagini, date JSON.
+                                </p>
                             </div>
-                            <div className="flex-1 bg-slate-50 p-3 rounded">
-                                <strong className="text-slate-600 block mb-1">Abordarea "Puristă" (Header)</strong>
-                                <code>Accept-Version: v1</code>
-                                <p className="text-slate-500 mt-1">Păstrează URL-ul curat, dar e mai greu de testat în browser.</p>
+                            <div className="p-4 bg-teal-50 border border-teal-100 rounded-lg">
+                                <h4 className="font-bold text-teal-800 mb-2 flex items-center gap-2"><ArrowRight size={16}/> HEAD Request</h4>
+                                <p className="text-sm text-teal-700">
+                                    Cere <strong>doar Headers</strong> (fără Body). Identic cu GET, dar serverul nu trimite datele efective. 
+                                    <br/><span className="italic opacity-80 mt-1 block">Util: Verifici dacă un fișier există sau cât de mare e (Content-Length) înainte să-l descarci.</span>
+                                </p>
                             </div>
-                        </div>
                     </div>
-
-                    {/* File Extensions */}
-                    <div className="pt-4">
-                        <h4 className="font-bold text-sm text-slate-800 mb-1">Resource Types (Extensii)</h4>
-                        <p className="text-xs text-slate-600 mb-2">
-                            Nu folosi <code>.json</code> decât dacă suporți și alte formate (ex: <code>.csv</code>) pentru developeri începători.
-                            Altfel, folosește header-ul <code>Accept: application/json</code>.
-                        </p>
-                    </div>
-
-                    {/* Non-CRUD Actions */}
-                    <div className="pt-4">
-                        <h4 className="font-bold text-sm text-slate-800 mb-1">Acțiuni Non-CRUD</h4>
-                        <p className="text-xs text-slate-600 mb-2">
-                            Uneori <code>UPDATE</code> nu e suficient (ex: "Suspend User"). Cum facem?
-                        </p>
-                        <div className="bg-yellow-50 border border-yellow-200 p-3 rounded text-xs">
-                            <div className="mb-2">
-                                <span className="font-bold text-yellow-800">Opțiunea 1 (Complexă):</span> PATCH la <code>status=suspended</code>
-                            </div>
-                            <div>
-                                <span className="font-bold text-indigo-800">Opțiunea 2 (Developer Experience):</span> 
-                                <br/><code className="bg-white px-1 rounded border border-indigo-200 ml-1">POST /users/123/actions/suspend</code>
-                                <p className="mt-1 text-slate-500">Folosirea verbului "suspend" în URL arată clar intenția, chiar dacă nu e pur REST.</p>
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
-             </Card>
-        </div>
-    );
-};
+            );
+        };
 
-// --- Main App Component ---
+        // --- MODUL 2: REST vs RPC ---
+        const RestComparison = () => {
+            const [mode, setMode] = useState('rest');
+            const examples = [
+                { action: "Obține toate produsele", rpc: "GET /api/getAllProducts", rest: "GET /api/products", type: "read" },
+                { action: "Adaugă un produs", rpc: "GET /api/createProduct?name=Phone", rest: "POST /api/products", type: "write" },
+                { action: "Vezi produsul #42", rpc: "POST /api/getProductDetails {id:42}", rest: "GET /api/products/42", type: "read" },
+                { action: "Șterge produsul #42", rpc: "GET /api/deleteProduct/42", rest: "DELETE /api/products/42", type: "delete" },
+                { action: "Schimbă preț produs #42", rpc: "POST /api/updatePrice/42", rest: "PATCH /api/products/42", type: "update" }
+            ];
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState('intro');
+            return (
+                <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+                        <h3 className="text-lg font-bold text-slate-800 mb-4">2. REST vs. Non-REST (Haos)</h3>
+                        <p className="text-slate-600 mb-6">HTTP este limba. REST este "gramatica" corectă. Dacă nu folosești REST, URL-urile tale arată ca niște comenzi dezordonate (RPC - Remote Procedure Call).</p>
 
-  return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-24 md:pb-20">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-indigo-600 text-white p-1.5 rounded-lg">
-              <Database size={20} />
-            </div>
-            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-600">
-              Lecție: HTTP & REST
-            </h1>
-          </div>
-          <nav className="hidden md:flex gap-1">
-            {[
-              { id: 'intro', label: '1. Concepte', icon: BookOpen },
-              { id: 'visualizer', label: '2. Vizualizare', icon: Zap },
-              { id: 'compare', label: '3. REST vs RPC', icon: LayoutList },
-              { id: 'playground', label: '4. Laborator', icon: Terminal },
-              { id: 'guide', label: '5. Ghid CRUD', icon: Star },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                  activeTab === tab.id 
-                    ? 'bg-slate-100 text-indigo-700' 
-                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                <tab.icon size={16} />
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </header>
-
-      {/* Mobile Nav */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-2 flex justify-around z-50">
-        {[
-            { id: 'intro', icon: BookOpen, label: 'Intro' },
-            { id: 'visualizer', icon: Zap, label: 'Vizual' },
-            { id: 'compare', icon: LayoutList, label: 'Vs' },
-            { id: 'playground', icon: Terminal, label: 'Lab' },
-            { id: 'guide', icon: Star, label: 'Ghid' },
-        ].map(tab => (
-            <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col items-center p-2 rounded-lg ${activeTab === tab.id ? 'text-indigo-600' : 'text-slate-400'}`}
-            >
-                <tab.icon size={20} />
-                <span className="text-[10px] font-medium mt-1">{tab.label}</span>
-            </button>
-        ))}
-      </div>
-
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        
-        {/* Intro Tab */}
-        {activeTab === 'intro' && (
-            <div className="space-y-8 animate-fade-in">
-                <div className="text-center space-y-4 mb-12">
-                    <h2 className="text-3xl font-extrabold text-slate-800">Tutorial detaliat despre REST, HTTP și API-uri</h2>
-                    <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                        Ai auzit de REST și HTTP, dar te încurcă termenii? Această lecție îți arată vizual cum funcționează comunicarea web modernă.
-                    </p>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-6">
-                    <Card className="p-6 border-t-4 border-t-blue-500">
-                        <div className="flex items-center gap-3 mb-4">
-                            <Globe className="text-blue-500" />
-                            <h3 className="text-xl font-bold">HTTP</h3>
+                        <div className="flex bg-slate-100 p-1 rounded-lg w-fit mb-6">
+                            <button onClick={() => setMode('rpc')} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${mode === 'rpc' ? 'bg-white shadow-sm text-red-600' : 'text-slate-500'}`}>Non-REST (Greșit)</button>
+                            <button onClick={() => setMode('rest')} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${mode === 'rest' ? 'bg-white shadow-sm text-green-600' : 'text-slate-500'}`}>RESTful (Corect)</button>
                         </div>
-                        <p className="text-slate-600 mb-4">HyperText Transfer Protocol</p>
-                        <p className="text-sm text-slate-500 leading-relaxed">
-                            Este <strong>mecanismul de transport</strong>. Este camionul care cară marfa.
-                            Definește CUM vorbesc calculatoarele (folosind Verbe, Headere, Coduri de Status).
-                            HTTP nu îi pasă ce transporți sau cum e structurat URL-ul.
-                        </p>
-                    </Card>
 
-                    <Card className="p-6 border-t-4 border-t-indigo-500">
-                        <div className="flex items-center gap-3 mb-4">
-                            <Box className="text-indigo-500" />
-                            <h3 className="text-xl font-bold">REST</h3>
+                        <div className="overflow-hidden rounded-lg border border-slate-200">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th className="p-4 text-slate-500 font-medium">Acțiunea Dorită</th>
+                                        <th className="p-4 text-slate-500 font-medium">{mode === 'rest' ? 'Abordarea REST' : 'Abordarea Non-REST'}</th>
+                                        <th className="p-4 text-slate-500 font-medium hidden md:table-cell">Explicație</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {examples.map((ex, idx) => (
+                                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                            <td className="p-4 font-medium text-slate-700">{ex.action}</td>
+                                            <td className="p-4 font-mono">
+                                                {mode === 'rest' ? (
+                                                    <span className="flex items-center gap-2">
+                                                        <Badge color={ex.rest.startsWith('GET') ? 'blue' : ex.rest.startsWith('POST') ? 'green' : ex.rest.startsWith('DELETE') ? 'red' : 'orange'}>{ex.rest.split(' ')[0]}</Badge>
+                                                        <span className="text-slate-600">{ex.rest.split(' ')[1]}</span>
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-red-600 flex items-center gap-2"><XCircle size={14} /> {ex.rpc}</span>
+                                                )}
+                                            </td>
+                                            <td className="p-4 text-slate-500 text-xs hidden md:table-cell">
+                                                {mode === 'rest' ? <span>Folosim verbul <strong>{ex.rest.split(' ')[0]}</strong> pe resursă.</span> : <span>Verbul e în URL.</span>}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                        <p className="text-slate-600 mb-4">Representational State Transfer</p>
-                        <p className="text-sm text-slate-500 leading-relaxed">
-                            Este un <strong>set de reguli (stil)</strong>.
-                            Îți spune cum să folosești HTTP corect.
-                            Regula de aur: Gândește în <strong>Resurse</strong> (substantive), nu în Acțiuni (verbe).
+
+                        {mode === 'rest' && (
+                            <div className="mt-4 p-4 bg-green-50 border border-green-100 rounded-lg flex items-start gap-3">
+                                <CheckCircle className="text-green-600 mt-1 shrink-0" size={20} />
+                                <div>
+                                    <p className="text-green-800 font-semibold text-sm">De ce e REST mai bun?</p>
+                                    <p className="text-green-700 text-sm mt-1">
+                                        URL-urile sunt predictibile. Dacă știi cum arată resursa (`/api/products`), știi automat cum să o creezi, citești, editezi sau ștergi doar schimbând verbul HTTP.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <Card className="p-6 bg-indigo-900 text-white border-none mt-8">
+                        <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
+                            <Database className="text-indigo-300" /> Concept Cheie: Stateless
+                        </h3>
+                        <p className="text-indigo-100 text-sm leading-relaxed">
+                            REST este <strong>Stateless</strong> (Fără stare). Asta înseamnă că Serverul NU ține minte cine ești între două cereri. 
+                            Fiecare cerere trebuie să conțină toate informațiile necesare (ex: token de autentificare).
+                            <br/><br/>
+                            <em>De ce?</em> Pentru scalabilitate. Dacă ai 1 milion de useri, serverul ar crăpa dacă ar trebui să țină minte sesiunea fiecăruia în memorie.
                         </p>
                     </Card>
                 </div>
+            );
+        };
 
-                <div className="bg-yellow-50 p-6 rounded-xl border border-yellow-200 flex gap-4">
-                    <div className="bg-yellow-100 p-2 rounded-full h-fit">
-                        <AlertTriangle className="text-yellow-700" size={24} />
+        // --- MODUL 3: API PLAYGROUND ---
+        const ApiPlayground = () => {
+            const [logs, setLogs] = useState([]);
+            const [selectedVerb, setSelectedVerb] = useState('GET');
+            const [endpoint, setEndpoint] = useState('/products');
+            const [loading, setLoading] = useState(false);
+            const [activeResource, setActiveResource] = useState('products');
+
+            const products = [
+                { id: 1, name: "Laptop Gaming", price: 1200, stock: 5 },
+                { id: 2, name: "Căști Wireless", price: 150, stock: 20 },
+                { id: 3, name: "Monitor 4K", price: 400, stock: 8 },
+            ];
+            const users = [
+                { id: 101, name: "Ana Popescu", email: "ana@test.com", role: "admin" },
+                { id: 102, name: "Mihai Ionescu", email: "mihai@test.com", role: "customer" },
+                { id: 103, name: "Elena Dumitru", email: "elena@test.com", role: "customer" },
+            ];
+
+            const handleResourceChange = (resource) => {
+                setActiveResource(resource);
+                setEndpoint(`/${resource}`);
+                setSelectedVerb('GET');
+            };
+
+            const handleSend = () => {
+                setLoading(true);
+                setTimeout(() => {
+                    let response = {};
+                    let status = 200;
+                    let statusText = "OK";
+
+                    if (endpoint.includes('products')) {
+                        if (selectedVerb === 'GET') {
+                            if (endpoint === '/products' || endpoint === '/products?sort=price_desc') {
+                                response = products;
+                            } else if (endpoint === '/products/1') {
+                                response = products[0];
+                            } else if (endpoint.includes('?')) {
+                                response = [products[0]];
+                            } else {
+                                status = 404;
+                                statusText = "Not Found";
+                                response = { error: "Produsul nu există" };
+                            }
+                        } else if (selectedVerb === 'HEAD') {
+                            status = 200;
+                            response = null;
+                        } else if (selectedVerb === 'POST') {
+                            status = 201;
+                            statusText = "Created";
+                            response = { id: 4, name: "Produs Nou", price: 0 };
+                        } else if (selectedVerb === 'DELETE') {
+                            status = 204;
+                            statusText = "No Content";
+                            response = null;
+                        } else {
+                            status = 405;
+                            statusText = "Method Not Allowed";
+                        }
+                    } else if (endpoint.includes('users')) {
+                         if (selectedVerb === 'GET') {
+                            if (endpoint === '/users') {
+                                response = users;
+                            } else if (endpoint === '/users/101') {
+                                response = users[0];
+                            } else {
+                                status = 404;
+                                statusText = "Not Found";
+                                response = { error: "User nu există" };
+                            }
+                         } else if (selectedVerb === 'POST') {
+                            status = 201;
+                            statusText = "Created";
+                            response = { id: 104, name: "User Nou" };
+                         } else if (selectedVerb === 'DELETE') {
+                            status = 204;
+                            statusText = "No Content";
+                            response = null;
+                         } else {
+                            status = 405;
+                            statusText = "Method Not Allowed";
+                        }
+                    } else {
+                        status = 404;
+                        statusText = "Not Found";
+                        response = { error: "Endpoint necunoscut" };
+                    }
+
+                    setLogs([{ id: Date.now(), verb: selectedVerb, url: `/api${endpoint}`, status, statusText, data: response }, ...logs]);
+                    setLoading(false);
+                }, 600);
+            };
+
+            return (
+                <div className="bg-slate-900 rounded-xl overflow-hidden shadow-xl border border-slate-700 font-mono text-sm">
+                    <div className="bg-slate-800 p-3 border-b border-slate-700 flex items-center justify-between">
+                        <div className="flex items-center gap-2"><Terminal size={16} className="text-slate-400" /><span className="text-slate-200 font-bold">API Console</span></div>
+                        <button onClick={() => setLogs([])} className="text-xs text-slate-400 hover:text-white flex items-center gap-1"><RefreshCw size={12} /> Clear</button>
                     </div>
-                    <div>
-                        <h4 className="font-bold text-yellow-800">Analogie Simplă</h4>
-                        <p className="text-yellow-800/80 mt-1">
-                            <strong>HTTP</strong> este Limba Română (vocabularul, gramatica).<br/>
-                            <strong>REST</strong> este stilul Jurnalistic (reguli despre cum să scrii un articol clar).<br/>
-                            Poți vorbi română (HTTP) fără să fii jurnalist (REST), dar rezultatul poate fi haotic.
-                        </p>
+                    
+                    <div className="bg-slate-800/30 p-2 flex gap-2 border-b border-slate-700 overflow-x-auto">
+                        <button onClick={() => handleResourceChange('products')} className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold ${activeResource === 'products' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}`}><ShoppingCart size={14} /> PRODUCTS</button>
+                        <button onClick={() => handleResourceChange('users')} className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold ${activeResource === 'users' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}`}><Users size={14} /> USERS</button>
                     </div>
-                </div>
-                
-                <div className="text-center pt-8">
-                     <button onClick={() => setActiveTab('visualizer')} className="bg-indigo-600 text-white px-8 py-3 rounded-full hover:bg-indigo-700 font-semibold shadow-lg shadow-indigo-200 transition-all transform hover:scale-105 flex items-center gap-2 mx-auto">
-                        Mergi la Vizualizare <ArrowRight size={18} />
-                     </button>
-                </div>
-            </div>
-        )}
-
-        {/* Visualizer Tab */}
-        {activeTab === 'visualizer' && (
-             <div className="animate-fade-in space-y-6">
-                <div className="mb-6">
-                    <h2 className="text-2xl font-bold text-slate-800">Cum circulă datele?</h2>
-                    <p className="text-slate-500">Selectează un verb HTTP pentru a vedea fluxul de date.</p>
-                </div>
-                <HttpVisualizer />
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                    <div className="p-4 bg-white rounded-lg border border-slate-200">
-                        <h4 className="font-bold text-slate-700 mb-2">Verbe HTTP (Metode)</h4>
-                        <ul className="space-y-2 text-sm text-slate-600">
-                            <li><span className="font-bold text-blue-600">GET</span> - Citire (Safe, cacheable)</li>
-                            <li><span className="font-bold text-teal-600">HEAD</span> - Doar Metadate (fără body)</li>
-                            <li><span className="font-bold text-green-600">POST</span> - Creare (Nu e idempotent)</li>
-                            <li><span className="font-bold text-orange-600">PUT</span> - Înlocuire totală</li>
-                            <li><span className="font-bold text-indigo-600">PATCH</span> - Modificare parțială</li>
-                            <li><span className="font-bold text-red-600">DELETE</span> - Ștergere</li>
-                        </ul>
-                    </div>
-                    <div className="p-4 bg-white rounded-lg border border-slate-200">
-                         <h4 className="font-bold text-slate-700 mb-2">Coduri de Status</h4>
-                         <ul className="space-y-2 text-sm text-slate-600">
-                            <li><span className="font-mono bg-blue-100 px-1 rounded text-blue-700">1xx</span> - Informațional (100 Continue)</li>
-                            <li><span className="font-mono bg-green-100 px-1 rounded text-green-700">2xx</span> - Succes (200 OK, 201 Created)</li>
-                            <li><span className="font-mono bg-yellow-100 px-1 rounded text-yellow-700">3xx</span> - Redirectare (301 Moved)</li>
-                            <li><span className="font-mono bg-red-100 px-1 rounded text-red-700">4xx</span> - Eroare Client (404 Not Found, 400 Bad Req)</li>
-                            <li><span className="font-mono bg-red-100 px-1 rounded text-red-700">5xx</span> - Eroare Server (500 Internal Error)</li>
-                        </ul>
-                    </div>
-                </div>
-             </div>
-        )}
-
-        {/* Compare Tab */}
-        {activeTab === 'compare' && (
-             <div className="animate-fade-in space-y-6">
-                <div className="mb-6">
-                    <h2 className="text-2xl font-bold text-slate-800">Arhitectura REST</h2>
-                    <p className="text-slate-500">Compară o abordare haotică cu standardul REST.</p>
-                </div>
-                <RestComparison />
-
-                <Card className="p-6 bg-indigo-900 text-white border-none mt-8">
-                     <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
-                        <Database className="text-indigo-300" /> Concept Cheie: Stateless
-                     </h3>
-                     <p className="text-indigo-100 text-sm leading-relaxed">
-                        REST este <strong>Stateless</strong> (Fără stare). Asta înseamnă că Serverul NU ține minte cine ești între două cereri. 
-                        Fiecare cerere trebuie să conțină toate informațiile necesare (ex: token de autentificare).
-                        <br/><br/>
-                        <em>De ce?</em> Pentru scalabilitate. Dacă ai 1 milion de useri, serverul ar crăpa dacă ar trebui să țină minte sesiunea fiecăruia în memorie.
-                     </p>
-                </Card>
-             </div>
-        )}
-
-        {/* Playground Tab */}
-        {activeTab === 'playground' && (
-             <div className="animate-fade-in space-y-6">
-                <div className="mb-6">
-                    <h2 className="text-2xl font-bold text-slate-800">Laborator Practic</h2>
-                    <p className="text-slate-500">Testează endpoint-urile REST pe un magazin virtual simulat.</p>
-                </div>
-                
-                <div className="flex gap-4 mb-4 overflow-x-auto pb-2">
-                    <div className="bg-white p-3 rounded border border-slate-200 min-w-[150px]">
-                        <div className="text-xs text-slate-400 uppercase font-bold mb-1">Resursa</div>
-                        <div className="flex items-center gap-2 font-bold text-slate-700">
-                             <ShoppingCart size={16} /> Products
+                    
+                    <div className="p-4 bg-slate-800/50 flex flex-col md:flex-row gap-3">
+                        <select value={selectedVerb} onChange={(e) => setSelectedVerb(e.target.value)} className="bg-slate-900 text-blue-400 font-bold border border-slate-700 rounded px-3 py-2 outline-none">
+                            <option>GET</option><option>HEAD</option><option>POST</option><option>PUT</option><option>DELETE</option><option>PATCH</option>
+                        </select>
+                        <div className="flex-1 flex items-center bg-slate-900 border border-slate-700 rounded px-3">
+                            <span className="text-slate-500 select-none">https://shop-api.com/api</span>
+                            <input type="text" value={endpoint} onChange={(e) => setEndpoint(e.target.value)} className="bg-transparent text-slate-200 w-full p-2 outline-none" />
                         </div>
-                        <div className="text-xs text-slate-500 mt-1">ID, Name, Price</div>
+                        <button onClick={handleSend} disabled={loading} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded transition-colors disabled:opacity-50">{loading ? '...' : 'SEND'}</button>
                     </div>
-                    <div className="bg-white p-3 rounded border border-slate-200 min-w-[150px]">
-                        <div className="text-xs text-slate-400 uppercase font-bold mb-1">Resursa</div>
-                        <div className="flex items-center gap-2 font-bold text-slate-700">
-                             <Users size={16} /> Users
-                        </div>
-                         <div className="text-xs text-slate-500 mt-1">ID, Name, Role</div>
+                    
+                    <div className="h-64 overflow-y-auto p-4 space-y-4 bg-slate-950">
+                        {logs.length === 0 && <div className="text-slate-600 text-center mt-20 italic">Aștept cereri...</div>}
+                        {logs.map(log => (
+                            <div key={log.id} className="border-l-2 border-slate-700 pl-3">
+                                <div className="flex items-center gap-3 mb-1">
+                                    <span className={`font-bold ${log.verb === 'GET' ? 'text-blue-400' : log.verb === 'HEAD' ? 'text-teal-400' : log.verb === 'POST' ? 'text-green-400' : log.verb === 'DELETE' ? 'text-red-400' : 'text-orange-400'}`}>{log.verb}</span>
+                                    <span className="text-slate-400">{log.url}</span>
+                                    <span className={`ml-auto text-xs px-2 py-0.5 rounded ${log.status >= 200 && log.status < 300 ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>{log.status} {log.statusText}</span>
+                                </div>
+                                {log.data !== null ? <pre className="text-slate-300 text-xs overflow-x-auto mt-2 bg-slate-900/50 p-2 rounded">{JSON.stringify(log.data, null, 2)}</pre> : <div className="text-slate-500 text-xs italic mt-2 bg-slate-900/30 p-2 rounded">[No Body Content]</div>}
+                            </div>
+                        ))}
                     </div>
                 </div>
+            );
+        };
 
-                <ApiPlayground />
-             </div>
-        )}
+        // --- MODUL 5: GHID CRUD ---
+        const CrudGuide = () => {
+            return (
+                <div className="space-y-8 animate-fade-in">
+                    <div className="mb-6"><h2 className="text-2xl font-bold text-slate-800">Ghid de Design CRUD</h2><p className="text-slate-500">Regulile de aur pentru un API curat (Actualizat 2024).</p></div>
 
-        {/* Guide Tab */}
-        {activeTab === 'guide' && (
-             <CrudGuide />
-        )}
+                    {/* 1. Naming & Nouns */}
+                    <Card className="p-6">
+                        <div className="flex items-center gap-3 mb-4"><div className="bg-purple-100 p-2 rounded-lg text-purple-700"><Box size={20} /></div><h3 className="text-lg font-bold text-slate-800">1. Substantive la Plural</h3></div>
+                        <p className="text-slate-600 text-sm mb-4">URL-urile trebuie să conțină doar <strong>substantive</strong> (resurse), nu verbe. Resursa reprezintă conceptul din baza de date. Folosește mereu <strong>pluralul</strong>.</p>
+                        
+                        <div className="grid md:grid-cols-2 gap-8">
+                            <ul className="space-y-3">
+                                <li className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-2 rounded"><XCircle size={16} /> <span>/createProduct</span> (Conține verb)</li>
+                                <li className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-2 rounded"><XCircle size={16} /> <span>/product</span> (Singular)</li>
+                                <li className="flex items-center gap-2 text-sm text-green-700 bg-green-50 p-2 rounded font-semibold"><CheckCircle size={16} /> <span>/products</span> (Plural & Substantiv)</li>
+                            </ul>
+                            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm">
+                                <h4 className="font-bold text-slate-700 mb-2">Exemplu URL:</h4>
+                                <div className="space-y-2 font-mono">
+                                    <div className="flex justify-between"><span className="text-slate-500">Toate produsele:</span><span className="text-blue-600">GET /products</span></div>
+                                    <div className="flex justify-between"><span className="text-slate-500">Un produs specific:</span><span className="text-blue-600">GET /products/123</span></div>
+                                    <div className="flex justify-between"><span className="text-slate-500">Creare:</span><span className="text-green-600">POST /products</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
 
-      </main>
-    </div>
-  );
-}
+                    {/* 2. PUT vs PATCH */}
+                    <Card className="p-6">
+                        <div className="flex items-center gap-3 mb-4"><div className="bg-orange-100 p-2 rounded-lg text-orange-700"><Edit3 size={20} /></div><h3 className="text-lg font-bold text-slate-800">2. Marea Dilemă: PUT vs PATCH</h3></div>
+                        <p className="text-slate-600 text-sm mb-6">Multe API-uri greșesc aici. Diferența este critică pentru consistența datelor.</p>
+                        
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <div className="border border-orange-200 bg-orange-50 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-2"><span className="font-bold text-orange-800">PUT</span><Badge color="orange">Înlocuire Totală</Badge></div>
+                                <p className="text-xs text-orange-800/80 mb-3">Rescrii tot obiectul. Dacă uiți un câmp, el va dispărea (va fi null).</p>
+                                <div className="bg-white p-2 rounded border border-orange-200 text-xs font-mono"><div className="text-slate-400">// Trimite TOT obiectul</div>{`{ "name": "New Name", "price": 100 }`}</div>
+                            </div>
+                            <div className="border border-indigo-200 bg-indigo-50 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-2"><span className="font-bold text-indigo-800">PATCH</span><Badge color="purple">Modificare Parțială</Badge></div>
+                                <p className="text-xs text-indigo-800/80 mb-3">Schimbi doar câmpurile trimise. Restul rămân neschimbate.</p>
+                                <div className="bg-white p-2 rounded border border-indigo-200 text-xs font-mono"><div className="text-slate-400">// Doar ce schimbi</div>{`{ "price": 150 }`}</div>
+                            </div>
+                        </div>
+                    </Card>
+
+                    {/* 3. Nesting & 4. Filtering */}
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <Card className="p-6">
+                            <div className="flex items-center gap-3 mb-4"><div className="bg-blue-100 p-2 rounded-lg text-blue-700"><Layers size={20} /></div><h3 className="text-lg font-bold text-slate-800">3. Imbricare (Nesting)</h3></div>
+                            <p className="text-slate-600 text-sm mb-4">Evită URL-urile adânci. Regula: <strong>Maxim 2 niveluri</strong>.</p>
+                            <div className="space-y-2 text-sm">
+                                <div className="p-2 bg-red-50 text-red-700 rounded border border-red-100 flex items-start gap-2"><XCircle size={16} className="mt-0.5 shrink-0" /><div className="break-all font-mono text-xs">/users/1/posts/55/comments/3</div></div>
+                                <div className="p-2 bg-green-50 text-green-700 rounded border border-green-100 flex items-start gap-2"><CheckCircle size={16} className="mt-0.5 shrink-0" /><div className="font-mono text-xs"><div>/users/1/posts</div><div className="mt-1 text-slate-500">...apoi accesezi direct:</div><div>/posts/55/comments</div></div></div>
+                            </div>
+                        </Card>
+
+                        <Card className="p-6">
+                            <div className="flex items-center gap-3 mb-4"><div className="bg-slate-100 p-2 rounded-lg text-slate-700"><Filter size={20} /></div><h3 className="text-lg font-bold text-slate-800">4. Filtrare & Sortare</h3></div>
+                            <p className="text-slate-600 text-sm mb-4">Nu crea endpoint-uri noi pentru căutare. Folosește <strong>Query Parameters</strong>.</p>
+                            <div className="space-y-3 font-mono text-xs">
+                                <div className="flex justify-between items-center border-b pb-2"><span className="text-slate-500">Căutare</span><span className="bg-slate-100 px-2 py-1 rounded text-blue-600">GET /products?search=iphone</span></div>
+                                <div className="flex justify-between items-center border-b pb-2"><span className="text-slate-500">Paginare</span><span className="bg-slate-100 px-2 py-1 rounded text-blue-600">GET /products?page=2&limit=10</span></div>
+                                <div className="flex justify-between items-center"><span className="text-slate-500">Sortare</span><span className="bg-slate-100 px-2 py-1 rounded text-blue-600">GET /products?sort=price_desc</span></div>
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* 5. Advanced Topics */}
+                    <Card className="p-6 border-l-4 border-l-indigo-500">
+                        <div className="flex items-center gap-3 mb-4"><div className="bg-indigo-100 p-2 rounded-lg text-indigo-700"><GitBranch size={20} /></div><h3 className="text-lg font-bold text-slate-800">5. Subiecte Avansate / Controversate</h3></div>
+                        <div className="space-y-6 divide-y divide-slate-100">
+                            
+                            {/* Versioning */}
+                            <div className="pt-2">
+                                <h4 className="font-bold text-sm text-slate-800 mb-1">Versioning</h4>
+                                <div className="flex flex-col md:flex-row gap-4 text-xs">
+                                    <div className="flex-1 bg-slate-50 p-3 rounded">
+                                        <strong className="text-indigo-600 block mb-1">Abordarea Pragmatică (URL)</strong>
+                                        <code>/v1/users</code>
+                                        <p className="text-slate-500 mt-1">Ușor de văzut, ușor de folosit. Standard în industrie.</p>
+                                    </div>
+                                    <div className="flex-1 bg-slate-50 p-3 rounded">
+                                        <strong className="text-slate-600 block mb-1">Abordarea "Puristă" (Header)</strong>
+                                        <code>Accept-Version: v1</code>
+                                        <p className="text-slate-500 mt-1">Păstrează URL-ul curat, dar e mai greu de testat în browser.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* File Extensions */}
+                            <div className="pt-4">
+                                <h4 className="font-bold text-sm text-slate-800 mb-1">Resource Types (Extensii)</h4>
+                                <p className="text-xs text-slate-600 mb-2">
+                                    Nu folosi <code>.json</code> decât dacă suporți și alte formate (ex: <code>.csv</code>) pentru developeri începători.
+                                    Altfel, folosește header-ul <code>Accept: application/json</code>.
+                                </p>
+                            </div>
+
+                            {/* Non-CRUD Actions */}
+                            <div className="pt-4">
+                                <h4 className="font-bold text-sm text-slate-800 mb-1">Acțiuni Non-CRUD</h4>
+                                <p className="text-xs text-slate-600 mb-2">
+                                    Uneori <code>UPDATE</code> nu e suficient (ex: "Suspend User"). Cum facem?
+                                </p>
+                                <div className="bg-yellow-50 border border-yellow-200 p-3 rounded text-xs">
+                                    <div className="mb-2">
+                                        <span className="font-bold text-yellow-800">Opțiunea 1 (Complexă):</span> PATCH la <code>status=suspended</code>
+                                    </div>
+                                    <div>
+                                        <span className="font-bold text-indigo-800">Opțiunea 2 (Developer Experience):</span> 
+                                        <br/><code className="bg-white px-1 rounded border border-indigo-200 ml-1">POST /users/123/actions/suspend</code>
+                                        <p className="mt-1 text-slate-500">Folosirea verbului "suspend" în URL arată clar intenția, chiar dacă nu e pur REST.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </Card>
+                </div>
+            );
+        };
+
+        // --- MAIN APP ---
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('intro');
+
+            const menuItems = [
+                { id: 'intro', label: '1. Concepte', icon: BookOpen },
+                { id: 'visualizer', label: '2. Vizualizare', icon: Zap },
+                { id: 'compare', label: '3. REST vs RPC', icon: LayoutList },
+                { id: 'playground', label: '4. Laborator', icon: Terminal },
+                { id: 'guide', label: '5. Ghid CRUD', icon: Star },
+            ];
+
+            const mobileMenuItems = [
+                { id: 'intro', icon: BookOpen, label: 'Intro' },
+                { id: 'visualizer', icon: Zap, label: 'Vizual' },
+                { id: 'compare', icon: LayoutList, label: 'Vs' },
+                { id: 'playground', icon: Terminal, label: 'Lab' },
+                { id: 'guide', icon: Star, label: 'Ghid' },
+            ];
+
+            const renderTab = () => {
+                switch(activeTab) {
+                    case 'visualizer': return <HttpVisualizer />;
+                    case 'compare': return <RestComparison />;
+                    case 'playground': return <ApiPlayground />;
+                    case 'guide': return <CrudGuide />;
+                    default: return (
+                        <div className="space-y-8 animate-fade-in">
+                            <div className="text-center space-y-4 mb-12"><h2 className="text-3xl font-extrabold text-slate-800">Să demistificăm API-urile</h2><p className="text-lg text-slate-600 max-w-2xl mx-auto">HTTP și REST explicate vizual.</p></div>
+                            
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <Card className="p-6 border-t-4 border-t-blue-500">
+                                    <div className="flex items-center gap-3 mb-4"><Globe className="text-blue-500" /><h3 className="text-xl font-bold">HTTP</h3></div>
+                                    <p className="text-slate-600 mb-4">HyperText Transfer Protocol</p>
+                                    <p className="text-sm text-slate-500 leading-relaxed">
+                                        Este <strong>mecanismul de transport</strong>. Este camionul care cară marfa.
+                                        Definește CUM vorbesc calculatoarele (folosind Verbe, Headere, Coduri de Status).
+                                        HTTP nu îi pasă ce transporți sau cum e structurat URL-ul.
+                                    </p>
+                                </Card>
+                                <Card className="p-6 border-t-4 border-t-indigo-500">
+                                    <div className="flex items-center gap-3 mb-4"><Box className="text-indigo-500" /><h3 className="text-xl font-bold">REST</h3></div>
+                                    <p className="text-slate-600 mb-4">Representational State Transfer</p>
+                                    <p className="text-sm text-slate-500 leading-relaxed">
+                                        Este un <strong>set de reguli (stil)</strong>.
+                                        Îți spune cum să folosești HTTP corect.
+                                        Regula de aur: Gândește în <strong>Resurse</strong> (substantive), nu în Acțiuni (verbe).
+                                    </p>
+                                </Card>
+                            </div>
+
+                            <div className="bg-yellow-50 p-6 rounded-xl border border-yellow-200 flex gap-4">
+                                <div className="bg-yellow-100 p-2 rounded-full h-fit">
+                                    <AlertTriangle className="text-yellow-700" size={24} />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-yellow-800">Analogie Simplă</h4>
+                                    <p className="text-yellow-800/80 mt-1">
+                                        <strong>HTTP</strong> este Limba Română (vocabularul, gramatica).<br/>
+                                        <strong>REST</strong> este stilul Jurnalistic (reguli despre cum să scrii un articol clar).<br/>
+                                        Poți vorbi română (HTTP) fără să fii jurnalist (REST), dar rezultatul poate fi haotic.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                                <div className="p-4 bg-white rounded-lg border border-slate-200">
+                                    <h4 className="font-bold text-slate-700 mb-2">Verbe HTTP (Metode)</h4>
+                                    <ul className="space-y-2 text-sm text-slate-600">
+                                        <li><span className="font-bold text-blue-600">GET</span> - Citire (Safe, cacheable)</li>
+                                        <li><span className="font-bold text-teal-600">HEAD</span> - Doar Metadate (fără body)</li>
+                                        <li><span className="font-bold text-green-600">POST</span> - Creare (Nu e idempotent)</li>
+                                        <li><span className="font-bold text-orange-600">PUT</span> - Înlocuire totală</li>
+                                        <li><span className="font-bold text-indigo-600">PATCH</span> - Modificare parțială</li>
+                                        <li><span className="font-bold text-red-600">DELETE</span> - Ștergere</li>
+                                    </ul>
+                                </div>
+                                <div className="p-4 bg-white rounded-lg border border-slate-200">
+                                    <h4 className="font-bold text-slate-700 mb-2">Coduri de Status</h4>
+                                    <ul className="space-y-2 text-sm text-slate-600">
+                                        <li><span className="font-mono bg-blue-100 px-1 rounded text-blue-700">1xx</span> - Informațional</li>
+                                        <li><span className="font-mono bg-green-100 px-1 rounded text-green-700">2xx</span> - Succes (200 OK)</li>
+                                        <li><span className="font-mono bg-yellow-100 px-1 rounded text-yellow-700">3xx</span> - Redirectare</li>
+                                        <li><span className="font-mono bg-red-100 px-1 rounded text-red-700">4xx</span> - Eroare Client</li>
+                                        <li><span className="font-mono bg-red-100 px-1 rounded text-red-700">5xx</span> - Eroare Server</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div className="text-center pt-8"><button onClick={() => setActiveTab('visualizer')} className="bg-indigo-600 text-white px-8 py-3 rounded-full hover:bg-indigo-700 font-semibold shadow-lg transition-all transform hover:scale-105 inline-flex items-center gap-2">Începe Lecția <ArrowRight size={18} /></button></div>
+                        </div>
+                    );
+                }
+            };
+
+            return (
+                <div className="min-h-screen pb-20">
+                    <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
+                        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="bg-indigo-600 text-white p-1.5 rounded-lg"><Database size={20} /></div>
+                                <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-blue-600">HTTP & REST</h1>
+                            </div>
+                            <nav className="hidden md:flex gap-1">
+                                {menuItems.map((tab) => {
+                                    const Icon = tab.icon;
+                                    return (
+                                        <button 
+                                            key={tab.id} 
+                                            onClick={() => setActiveTab(tab.id)} 
+                                            className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${activeTab === tab.id ? 'bg-slate-100 text-indigo-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+                                        >
+                                            <Icon size={16} />
+                                            {tab.label}
+                                        </button>
+                                    );
+                                })}
+                            </nav>
+                        </div>
+                    </header>
+                    <main className="max-w-4xl mx-auto px-4 py-8">{renderTab()}</main>
+                    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-2 flex justify-around z-50">
+                         {mobileMenuItems.map((tab) => {
+                            const Icon = tab.icon;
+                            return (
+                                <button 
+                                    key={tab.id} 
+                                    onClick={() => setActiveTab(tab.id)} 
+                                    className={`flex flex-col items-center p-2 rounded-lg ${activeTab === tab.id ? 'text-indigo-600' : 'text-slate-400'}`}
+                                >
+                                    <Icon size={20} />
+                                    <span className="text-[10px] font-medium mt-1">{tab.label}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
